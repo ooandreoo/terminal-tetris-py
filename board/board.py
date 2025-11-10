@@ -36,9 +36,11 @@ class Board:
                 rows_to_clear.append(i)
         rows_to_clear.reverse()
         for row in rows_to_clear:
-            self.matrix.pop(row)
+            for column in range(self.width):
+                self.matrix[column].pop(row)
         for _ in range(len(rows_to_clear)):
-            self.matrix.append([0 for _ in range(self.width)])
+            for column in range(self.width):
+                self.matrix[column].append(0)
                 
 
     def add_piece(self):
