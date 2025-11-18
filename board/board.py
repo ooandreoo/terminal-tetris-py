@@ -1,5 +1,7 @@
 from piece.piece import Piece
 from tools.piece_generator import PieceGenerator
+from tools.random_generator import RandomGenerator
+from tools.pieces_printing_utils import get_matrix_to_print
 
 import os
 import time
@@ -21,7 +23,13 @@ class Board:
         self.gravity_delay = 1
         self.gravity_increase_multiplier = 40
         self.minimum_gravity_delay = 0.3
-        self.game_computing_speed = 0.2
+        self.game_computing_speed = 0.05
+        self.game_over = False
+        self.can_switch_piece = True
+        self.available_piece_for_switch = None
+        self.randomizer = RandomGenerator([0,1,2,3,4,5,6],2,4)
+        self.current_piece_type = None
+        self.next_piece_type = None
 
     def clear_filled_rows(self):
         # this logic works only if each matrix[] was a row, but currently they are a column of the matrix, refactoring is needed
@@ -49,7 +57,11 @@ class Board:
             for position in self.piece.get_positions():
                 self.matrix[position[0]][position[1]] = 1
             self.clear_filled_rows()
-        self.piece = self.piece_generator.generate_piece()
+            self.current_piece_type = self.next_piece_type
+            self.next_piece_type = self.randomizer.generate_random_value()
+            if(self.can_switch_piece == False):
+                self.can_switch_piece = True
+        self.piece = self.piece_generator.generate_piece(self.current_piece_type)
 
     def piece_reached_bottom(self):
         for point in self.piece.get_positions():
@@ -97,23 +109,58 @@ class Board:
                 self.piece.move("right")
             elif(self.key_pressed=="s"):
                 self.tick()
+            elif(self.key_pressed==" "):
+                while not self.piece_reached_bottom():
+                    self.piece.move()
+                self.tick()
+            elif(self.key_pressed=="c"):
+                self.switch_pieces()
             elif(self.key_pressed=="w"):
                 self.piece.rotate(1)
                 self.adjust_piece_if_overboard()
             self.key_pressed = None
 
+    def switch_pieces(self):
+        # store current piece and respawn a new piece
+        if(self.can_switch_piece):
+            self.can_switch_piece = False
+            if(self.available_piece_for_switch == None):
+                self.piece = self.piece_generator.generate_piece(self.next_piece_type)
+                self.available_piece_for_switch = self.current_piece_type
+                self.current_piece_type = self.next_piece_type
+                self.next_piece_type = self.randomizer.generate_random_value()
+            else:
+                self.piece = self.piece_generator.generate_piece(self.available_piece_for_switch)
+                aux = self.current_piece_type
+                self.current_piece_type = self.available_piece_for_switch
+                self.available_piece_for_switch = aux
+
+
+        
+
     def start_loop(self):
+        self.current_piece_type = self.randomizer.generate_random_value()
+        self.next_piece_type = self.randomizer.generate_random_value()
         self.start_input_thread()
         self.start_gravity_thread()
         while self.running:
             self.move_piece()
             self.draw()
             time.sleep(self.game_computing_speed)
+        if(self.game_over):
+            print("--- GAME OVER ---\r")
 
+    def is_matrix_full(self):
+        for position in self.piece.get_positions():
+            if(self.matrix[position[0]][position[1]]==1):
+                return True
 
     def tick(self):
         if(self.piece == None or self.piece_reached_bottom()):
             self.add_piece()
+            if(self.is_matrix_full()):
+                self.running = False
+                self.game_over = True
         else:
             self.piece.move()
 
@@ -159,8 +206,19 @@ class Board:
         self.clear()
         piece_positions = self.piece.get_positions()
         piece_positions.sort()
+        next_pieces_matrix = get_matrix_to_print(self.next_piece_type,self.available_piece_for_switch)
 
         print("(a) left     (d) right   (s) down  (w) rotate   (q) quit\r")
+        print("\r")
+        print("(space) bottom    (c) change\r")
+        print("\r")
+        print("\r")
+        print("-- Next Piece --   -- Switch Piece--\r")
+        print("".join(next_pieces_matrix[0])+"\r")
+        print("".join(next_pieces_matrix[1])+"\r")
+        print("".join(next_pieces_matrix[2])+"\r")
+        print("".join(next_pieces_matrix[3])+"\r")
+        print("\r")
         print("--- START OF BOARD ---\r")
         j = self.height-1
         for _ in range(self.height):
@@ -178,4 +236,4 @@ class Board:
             j-=1
             print(line,"|\r")
         print("--- END OF BOARD ---\r")
-        print("last key pressed: ",self.key_pressed,"\r")
+        print("\r")

@@ -1,11 +1,9 @@
 from piece.piece import Piece
-from tools.random_generator import RandomGenerator
 
 class PieceGenerator:
     def __init__(self, boardHeight, boardWidth):
         # center for start instantiating pieces, needs to be 1 row below top row because of pieces distribution of pieces
         self.center = (boardWidth//2,boardHeight-2)
-        self.randomizer = RandomGenerator([0,1,2,3,4,5,6],2,4)
         self.pieces_figures = [
             [(0,0),(-1,0),(1,0),(0,1)],
             [(0,0),(0,1),(1,0),(1,1)],
@@ -23,8 +21,7 @@ class PieceGenerator:
 
         return positions
 
-    def generate_piece(self):
-        index = self.randomizer.generate_random_value()
+    def generate_piece(self, index):
 
         piece_positions = self.get_positions(index)
 
